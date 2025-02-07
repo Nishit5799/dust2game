@@ -26,11 +26,22 @@ const lerpAngle = (start, end, t) => {
 
   return normalizeAngle(start + (end - start) * t);
 };
-const PlayerController = () => {
-  const WALK_SPEED = 2.1;
-  const RUN_SPEED = 5.1;
-  const ROTATION_SPEED = degToRad(4);
 
+const PlayerController = () => {
+  const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
+    "Character Control",
+    {
+      WALK_SPEED: { value: 0.8, min: 0.1, max: 4, step: 0.1 },
+      RUN_SPEED: { value: 1.6, min: 0.2, max: 12, step: 0.1 },
+      ROTATION_SPEED: {
+        value: degToRad(0.5),
+        min: degToRad(0.1),
+        max: degToRad(5),
+        step: degToRad(0.1),
+      },
+    }
+  );
+  const inTheAir = useRef(false);
   const rb = useRef();
   const container = useRef();
   const cameraTarget = useRef();
@@ -45,23 +56,78 @@ const PlayerController = () => {
   const [, get] = useKeyboardControls();
   const isClicking = useRef(false);
 
+  const JUMP_FORCE = 3;
   useEffect(() => {
-    const onMouseDown = (e) => {
+    const startTouch = { x: 0, y: 0 };
+    const movement = { x: 0, z: 0 };
+    let isDragging = false;
+
+    const onStart = (e) => {
       isClicking.current = true;
+      isDragging = false; // Reset dragging flag
+
+      if (e.touches) {
+        startTouch.x = e.touches[0].clientX;
+        startTouch.y = e.touches[0].clientY;
+      } else {
+        startTouch.x = e.clientX;
+        startTouch.y = e.clientY;
+      }
     };
-    const onMouseUp = (e) => {
+
+    const onMove = (e) => {
+      if (!isClicking.current) return;
+
+      let currentX, currentY;
+      if (e.touches) {
+        currentX = e.touches[0].clientX;
+        currentY = e.touches[0].clientY;
+      } else {
+        currentX = e.clientX;
+        currentY = e.clientY;
+      }
+
+      const deltaX = currentX - startTouch.x;
+      const deltaY = currentY - startTouch.y;
+
+      // Only start movement if drag distance is significant
+      if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+        isDragging = true;
+      }
+
+      if (isDragging) {
+        // Normalize movement based on screen size
+        movement.x = deltaX / window.innerWidth;
+        movement.z = -deltaY / window.innerHeight; // Invert Y for natural movement
+
+        // Calculate the angle based on drag direction
+        characterRotationTarget.current = Math.atan2(movement.x, movement.z);
+      }
+    };
+
+    const onEnd = () => {
       isClicking.current = false;
+      isDragging = false;
+      movement.x = 0;
+      movement.z = 0;
     };
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("mouseup", onMouseUp);
-    // touch
-    document.addEventListener("touchstart", onMouseDown);
-    document.addEventListener("touchend", onMouseUp);
+
+    document.addEventListener("mousedown", onStart);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onEnd);
+
+    document.addEventListener("touchstart", onStart);
+    document.addEventListener("touchmove", onMove);
+    document.addEventListener("touchend", onEnd);
+
     return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchstart", onMouseDown);
-      document.removeEventListener("touchend", onMouseUp);
+      document.removeEventListener("mousedown", onStart);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onEnd);
+
+      document.removeEventListener("touchstart", onStart);
+      document.removeEventListener("touchmove", onMove);
+      document.removeEventListener("touchend", onEnd);
     };
   }, []);
 
@@ -72,7 +138,7 @@ const PlayerController = () => {
         x: 0,
         z: 0,
       };
-
+      const curVel = rb.current.linvel();
       if (get().forward) {
         movement.z = 1;
       }
@@ -98,6 +164,12 @@ const PlayerController = () => {
       }
       if (get().right) {
         movement.x = -1;
+      }
+      if (get().jump && !inTheAir.current) {
+        vel.y += JUMP_FORCE;
+        inTheAir.current = true;
+      } else {
+        vel.y = curVel.y;
       }
       if (movement.x !== 0) {
         rotationTarget.current += ROTATION_SPEED * movement.x;
@@ -143,15 +215,24 @@ const PlayerController = () => {
     }
   });
   return (
-    <RigidBody colliders={false} lockRotations ref={rb}>
+    <RigidBody
+      colliders={false}
+      lockRotations
+      ref={rb}
+      onCollisionEnter={({ other }) => {
+        if (other.rigidBodyObject.name === "ground") {
+          inTheAir.current = false;
+        }
+      }}
+    >
       <group ref={container}>
         <group ref={cameraTarget} position-z={1.5} />
-        <group ref={cameraPosition} position-y={2} position-z={-2} />
+        <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
         </group>
       </group>
-      <CapsuleCollider args={[0.35, 0.3]} position-y={-0.52} />
+      <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
     </RigidBody>
   );
 };

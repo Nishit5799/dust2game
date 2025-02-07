@@ -13,6 +13,7 @@ export default function Player({ animation, ...props }) {
 
   useEffect(() => {
     // Reset and fade in the selected animation, default to "idle" if no animation is provided
+
     actions[animation]?.reset().fadeIn(0.24).play();
 
     return () => actions?.[animation]?.fadeOut(0.24); // Clean up on unmount or animation change

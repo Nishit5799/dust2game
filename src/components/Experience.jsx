@@ -34,13 +34,17 @@ const keyboardMap = [
     name: "run",
     keys: ["Shift"],
   },
+  {
+    name: "jump",
+    keys: ["Space"],
+  },
 ];
 
 const Experience = () => {
   const shadowCameraRef = useRef();
   return (
     <KeyboardControls map={keyboardMap}>
-      <Canvas camera={{ position: [0, 4, 4], fov: 60 }}>
+      <Canvas camera={{ position: [0, 4, 4], fov: 60 }} shadows>
         {/* <OrbitControls /> */}
 
         <Environment preset="sunset" />
@@ -61,12 +65,9 @@ const Experience = () => {
             attach={"shadow-camera"}
           />
         </directionalLight>
-        <Physics debug>
+        <Physics>
           <PlayerController />
-          {/* <mesh position-y={-0.5}>
-          <boxGeometry args={[10, 0.4, 10]} />
-          <meshStandardMaterial color={"yellow"} />
-        </mesh> */}
+
           <Dust2Map />
         </Physics>
       </Canvas>
