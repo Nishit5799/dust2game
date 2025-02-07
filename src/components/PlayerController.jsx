@@ -6,6 +6,26 @@ import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
 import { useKeyboardControls } from "@react-three/drei";
 import { degToRad, MathUtils } from "three/src/math/MathUtils";
+const normalizeAngle = (angle) => {
+  while (angle > Math.PI) angle -= 2 * Math.PI;
+  while (angle < -Math.PI) angle += 2 * Math.PI;
+  return angle;
+};
+
+const lerpAngle = (start, end, t) => {
+  start = normalizeAngle(start);
+  end = normalizeAngle(end);
+
+  if (Math.abs(end - start) > Math.PI) {
+    if (end > start) {
+      start += 2 * Math.PI;
+    } else {
+      end += 2 * Math.PI;
+    }
+  }
+
+  return normalizeAngle(start + (end - start) * t);
+};
 
 const PlayerController = () => {
   const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
@@ -21,154 +41,146 @@ const PlayerController = () => {
       },
     }
   );
-
   const inTheAir = useRef(false);
   const rb = useRef();
   const container = useRef();
   const cameraTarget = useRef();
+  const [animation, setAnimation] = useState("idle");
   const cameraPosition = useRef();
   const character = useRef();
-  const rotationTarget = useRef(0);
   const characterRotationTarget = useRef(0);
-  const [animation, setAnimation] = useState("idle");
+  const rotationTarget = useRef(0);
+  const cameraWorldPosition = useRef(new Vector3());
+  const cameraLookAtWorldPosition = useRef(new Vector3());
+  const cameraLookAt = useRef(new Vector3());
   const [, get] = useKeyboardControls();
+  const isClicking = useRef(false);
 
   const JUMP_FORCE = 3;
 
-  // Mouse Drag Variables (only for small screens)
-  const dragStart = useRef(new Vector3());
-  const dragEnd = useRef(new Vector3());
-  const dragging = useRef(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth <= 640); // sm breakpoint (640px)
-
-  // Update screen size on resize
   useEffect(() => {
-    const handleResize = () => setIsSmallScreen(window.innerWidth <= 640);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    const onMouseDown = (e) => {
+      isClicking.current = true;
+    };
+    const onMouseUp = (e) => {
+      isClicking.current = false;
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mouseup", onMouseUp);
+    // touch
+    document.addEventListener("touchstart", onMouseDown);
+    document.addEventListener("touchend", onMouseUp);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("touchstart", onMouseDown);
+      document.removeEventListener("touchend", onMouseUp);
+    };
   }, []);
 
-  const handlePointerDown = (event) => {
-    if (!isSmallScreen) return;
-    dragStart.current.set(event.clientX, event.clientY, 0);
-    dragging.current = true;
-  };
-
-  const handlePointerMove = (event) => {
-    if (!isSmallScreen || !dragging.current) return;
-    dragEnd.current.set(event.clientX, event.clientY, 0);
-  };
-
-  const handlePointerUp = () => {
-    if (!isSmallScreen || !dragging.current) return;
-
-    const deltaX = dragEnd.current.x - dragStart.current.x;
-    const deltaY = dragEnd.current.y - dragStart.current.y;
-
-    let movement = { x: 0, z: 0 };
-    let speed = RUN_SPEED;
-
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      if (deltaX > 0) movement.x = 1; // Swipe Right
-      else movement.x = -1; // Swipe Left
-    } else {
-      if (deltaY > 0) movement.z = -1; // Swipe Down (Backward)
-      else movement.z = 1; // Swipe Up (Forward)
-    }
-
+  useFrame(({ camera, mouse }) => {
     if (rb.current) {
-      let vel = rb.current.linvel();
-      vel.x =
-        Math.sin(rotationTarget.current + characterRotationTarget.current) *
-        speed *
-        movement.z;
-      vel.z =
-        Math.cos(rotationTarget.current + characterRotationTarget.current) *
-        speed *
-        movement.z;
+      const vel = rb.current.linvel();
+      const movement = {
+        x: 0,
+        z: 0,
+      };
+      const curVel = rb.current.linvel();
+      if (get().forward) {
+        movement.z = 1;
+      }
+      if (get().backward) {
+        movement.z = -1;
+      }
 
+      let speed = get().run ? RUN_SPEED : WALK_SPEED;
+
+      if (isClicking.current) {
+        console.log("clicking", mouse.x, mouse.y);
+        if (Math.abs(mouse.x) > 0.1) {
+          movement.x = -mouse.x;
+        }
+        movement.z = mouse.y + 0.4;
+        if (Math.abs(movement.x) > 0.5 || Math.abs(movement.z) > 0.5) {
+          speed = RUN_SPEED;
+        }
+      }
+
+      if (get().left) {
+        movement.x = 1;
+      }
+      if (get().right) {
+        movement.x = -1;
+      }
+      if (get().jump && !inTheAir.current) {
+        vel.y += JUMP_FORCE;
+        inTheAir.current = true;
+      } else {
+        vel.y = curVel.y;
+      }
       if (movement.x !== 0) {
         rotationTarget.current += ROTATION_SPEED * movement.x;
       }
 
+      if (movement.x !== 0 || movement.z !== 0) {
+        characterRotationTarget.current = Math.atan2(movement.x, movement.z);
+        vel.x =
+          Math.sin(rotationTarget.current + characterRotationTarget.current) *
+          speed;
+        vel.z =
+          Math.cos(rotationTarget.current + characterRotationTarget.current) *
+          speed;
+        if (speed === RUN_SPEED) {
+          setAnimation("run");
+        } else {
+          setAnimation("walk");
+        }
+      } else {
+        setAnimation("idle");
+      }
+      character.current.rotation.y = lerpAngle(
+        character.current.rotation.y,
+        characterRotationTarget.current,
+        0.1
+      );
       rb.current.setLinvel(vel, true);
-      setAnimation(movement.z !== 0 ? "run" : "idle");
     }
 
-    dragging.current = false;
-  };
-
-  useFrame(() => {
-    if (!rb.current) return;
-    const vel = rb.current.linvel();
-    const curVel = rb.current.linvel();
-
-    // Keyboard Movement Handling
-    const movement = { x: 0, z: 0 };
-    let speed = get().run ? RUN_SPEED : WALK_SPEED;
-
-    if (get().forward) movement.z = 1;
-    if (get().backward) movement.z = -1;
-    if (get().left) movement.x = 1;
-    if (get().right) movement.x = -1;
-    if (get().jump && !inTheAir.current) {
-      vel.y += JUMP_FORCE;
-      inTheAir.current = true;
-    } else {
-      vel.y = curVel.y;
-    }
-
-    if (movement.x !== 0) {
-      rotationTarget.current += ROTATION_SPEED * movement.x;
-    }
-
-    if (movement.x !== 0 || movement.z !== 0) {
-      characterRotationTarget.current = Math.atan2(movement.x, movement.z);
-      vel.x =
-        Math.sin(rotationTarget.current + characterRotationTarget.current) *
-        speed;
-      vel.z =
-        Math.cos(rotationTarget.current + characterRotationTarget.current) *
-        speed;
-      setAnimation(speed === RUN_SPEED ? "run" : "walk");
-    } else {
-      setAnimation("idle");
-    }
-
-    character.current.rotation.y = MathUtils.lerp(
-      character.current.rotation.y,
-      characterRotationTarget.current,
+    // CAMERA
+    container.current.rotation.y = MathUtils.lerp(
+      container.current.rotation.y,
+      rotationTarget.current,
       0.1
     );
-    rb.current.setLinvel(vel, true);
-  });
+    cameraPosition.current.getWorldPosition(cameraWorldPosition.current);
+    camera.position.lerp(cameraWorldPosition.current, 0.1);
 
+    if (cameraTarget.current) {
+      cameraTarget.current.getWorldPosition(cameraLookAtWorldPosition.current);
+      cameraLookAt.current.lerp(cameraLookAtWorldPosition.current, 0.1);
+      camera.lookAt(cameraLookAt.current);
+    }
+  });
   return (
-    <group
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+    <RigidBody
+      colliders={false}
+      lockRotations
+      ref={rb}
+      onCollisionEnter={({ other }) => {
+        if (other.rigidBodyObject.name === "ground") {
+          inTheAir.current = false;
+        }
+      }}
     >
-      <RigidBody
-        colliders={false}
-        lockRotations
-        ref={rb}
-        onCollisionEnter={({ other }) => {
-          if (other.rigidBodyObject.name === "ground") {
-            inTheAir.current = false;
-          }
-        }}
-      >
-        <group ref={container}>
-          <group ref={cameraTarget} position-z={1.5} />
-          <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
-          <group ref={character}>
-            <Player position-y={-0.58} animation={animation} />
-          </group>
+      <group ref={container}>
+        <group ref={cameraTarget} position-z={1.5} />
+        <group ref={cameraPosition} position-y={6.5} position-z={-6.5} />
+        <group ref={character}>
+          <Player position-y={-0.58} animation={animation} />;
         </group>
-        <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
-      </RigidBody>
-    </group>
+      </group>
+      <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
+    </RigidBody>
   );
 };
 
