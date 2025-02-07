@@ -174,7 +174,7 @@ const PlayerController = () => {
     >
       <group ref={container}>
         <group ref={cameraTarget} position-z={1.5} />
-        <group ref={cameraPosition} position-y={6.5} position-z={-6.5} />
+        <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
         </group>
