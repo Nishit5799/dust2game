@@ -4,8 +4,9 @@ import { CapsuleCollider, RigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
 import { useFrame } from "@react-three/fiber";
 import { useControls } from "leva";
-import { useKeyboardControls } from "@react-three/drei";
+import { useKeyboardControls, Html } from "@react-three/drei";
 import { degToRad, MathUtils } from "three/src/math/MathUtils";
+
 const normalizeAngle = (angle) => {
   while (angle > Math.PI) angle -= 2 * Math.PI;
   while (angle < -Math.PI) angle += 2 * Math.PI;
@@ -201,6 +202,26 @@ const PlayerController = () => {
         </group>
       </group>
       <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
+      <Html position={[0.8, 1.5, 0]} distanceFactor={5}>
+        <button
+          onTouchStart={() => {
+            if (!inTheAir.current) {
+              rb.current.setLinvel({ x: 0, y: JUMP_FORCE, z: 0 }, true);
+              inTheAir.current = true;
+            }
+          }}
+          style={{
+            padding: "10px 20px",
+            fontSize: "18px",
+            background: "rgba(255, 255, 255, 0.8)",
+            borderRadius: "10px",
+            border: "none",
+            cursor: "pointer",
+          }}
+        >
+          ⬆ Jump
+        </button>
+      </Html>
     </RigidBody>
   );
 };
