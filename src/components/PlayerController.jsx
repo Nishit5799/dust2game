@@ -29,6 +29,18 @@ const lerpAngle = (start, end, t) => {
 };
 
 const PlayerController = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth <= 768); // Show button if screen width is 768px or below
+    };
+
+    checkScreenSize(); // Check on mount
+    window.addEventListener("resize", checkScreenSize); // Update when resized
+
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
   const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
     "Character Control",
     {
@@ -199,31 +211,45 @@ const PlayerController = () => {
         <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
+          {isMobile && (
+            <Html position={[0.01, 1, 0]} transform={false}>
+              <button
+                onTouchStart={() => {
+                  if (!inTheAir.current && rb.current) {
+                    const currentVel = rb.current.linvel(); // Get current velocity
+                    rb.current.setLinvel(
+                      {
+                        x: currentVel.x, // Preserve movement direction
+                        y: JUMP_FORCE, // Apply jump force
+                        z: currentVel.z, // Preserve movement direction
+                      },
+                      true
+                    );
+                    inTheAir.current = true;
+                  }
+                }}
+                style={{
+                  padding: "10px 20px",
+                  fontSize: "16px",
+                  background: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: "8px",
+                  border: "1px solid #000",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                ⬆ Jump
+              </button>
+            </Html>
+          )}
         </group>
       </group>
       <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
-      <Html position={[0.8, 1.5, 0]} distanceFactor={5}>
-        <button
-          onTouchStart={() => {
-            if (!inTheAir.current) {
-              rb.current.setLinvel({ x: 0, y: JUMP_FORCE, z: 0 }, true);
-              inTheAir.current = true;
-            }
-          }}
-          style={{
-            padding: "10px 20px",
-            fontSize: "18px",
-            background: "rgba(255, 255, 255, 0.8)",
-            borderRadius: "10px",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          ⬆ Jump
-        </button>
-      </Html>
     </RigidBody>
   );
 };
 
 export default PlayerController;
+{
+  /* <Html position={[0.01, 1, 0]} transform={false}> */
+}
