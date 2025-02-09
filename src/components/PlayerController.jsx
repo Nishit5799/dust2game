@@ -240,7 +240,7 @@ const PlayerController = () => {
                   touchAction: "none", // Ensures better touch behavior
                 }}
               >
-                ⬆ Jump
+                Jump
               </button>
             </Html>
           )}
