@@ -212,16 +212,17 @@ const PlayerController = () => {
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
           {isMobile && (
-            <Html position={[0.01, 1, 0]} transform={false}>
+            <Html position={[0.01, 1.5, 0]} transform={false}>
               <button
-                onTouchStart={() => {
+                onTouchStart={(event) => {
+                  event.preventDefault(); // Prevents touch interference
                   if (!inTheAir.current && rb.current) {
                     const currentVel = rb.current.linvel(); // Get current velocity
                     rb.current.setLinvel(
                       {
-                        x: currentVel.x, // Preserve movement direction
+                        x: currentVel.x, // Keep moving in the same direction
                         y: JUMP_FORCE, // Apply jump force
-                        z: currentVel.z, // Preserve movement direction
+                        z: currentVel.z, // Preserve movement speed
                       },
                       true
                     );
@@ -236,6 +237,7 @@ const PlayerController = () => {
                   border: "1px solid #000",
                   cursor: "pointer",
                   fontWeight: "bold",
+                  touchAction: "none", // Ensures better touch behavior
                 }}
               >
                 ⬆ Jump
