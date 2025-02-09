@@ -68,6 +68,7 @@ const PlayerController = () => {
   const cameraLookAt = useRef(new Vector3());
   const [, get] = useKeyboardControls();
   const isClicking = useRef(false);
+  const activeTouches = useRef(new Set());
 
   const JUMP_FORCE = 3;
 
@@ -102,6 +103,29 @@ const PlayerController = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const onTouchStart = (e) => {
+      e.preventDefault(); // Prevents interference with scrolling or zooming
+
+      for (let touch of e.touches) {
+        activeTouches.current.add(touch.identifier); // Track all active fingers
+      }
+    };
+
+    const onTouchEnd = (e) => {
+      for (let touch of e.changedTouches) {
+        activeTouches.current.delete(touch.identifier); // Remove lifted fingers
+      }
+    };
+
+    document.addEventListener("touchstart", onTouchStart, { passive: false });
+    document.addEventListener("touchend", onTouchEnd, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
   useFrame(({ camera, mouse }) => {
     if (rb.current) {
       const vel = rb.current.linvel();
@@ -212,15 +236,16 @@ const PlayerController = () => {
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
           {isMobile && (
-            <Html position={[0.01, 1.5, 0]} transform={false}>
+            <Html position={[0.01, 1, 0]} transform={false}>
               <button
                 onTouchStart={(event) => {
-                  event.preventDefault(); // Prevents touch interference
+                  event.preventDefault(); // Prevents any unwanted gesture issues
+
                   if (!inTheAir.current && rb.current) {
                     const currentVel = rb.current.linvel(); // Get current velocity
                     rb.current.setLinvel(
                       {
-                        x: currentVel.x, // Keep moving in the same direction
+                        x: currentVel.x, // Preserve movement direction
                         y: JUMP_FORCE, // Apply jump force
                         z: currentVel.z, // Preserve movement speed
                       },
@@ -237,7 +262,7 @@ const PlayerController = () => {
                   border: "1px solid #000",
                   cursor: "pointer",
                   fontWeight: "bold",
-                  touchAction: "none", // Ensures better touch behavior
+                  touchAction: "none", // Prevents browser interference
                 }}
               >
                 Jump
