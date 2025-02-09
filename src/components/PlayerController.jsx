@@ -72,6 +72,36 @@ const PlayerController = () => {
 
   const JUMP_FORCE = 3;
 
+  const onTouchStart = (e) => {
+    e.preventDefault(); // Prevents interference with system gestures
+
+    for (let touch of e.touches) {
+      activeTouches.current.add(touch.identifier);
+    }
+
+    isClicking.current = true; // Ensure movement does not stop
+  };
+
+  const onTouchEnd = (e) => {
+    for (let touch of e.changedTouches) {
+      activeTouches.current.delete(touch.identifier);
+    }
+
+    if (activeTouches.current.size === 0) {
+      isClicking.current = false; // Stop movement only if no active touches exist
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("touchstart", onTouchStart, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
   useEffect(() => {
     const onMouseDown = (e) => {
       isClicking.current = true;
@@ -103,29 +133,6 @@ const PlayerController = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const onTouchStart = (e) => {
-      e.preventDefault(); // Prevents interference with scrolling or zooming
-
-      for (let touch of e.touches) {
-        activeTouches.current.add(touch.identifier); // Track all active fingers
-      }
-    };
-
-    const onTouchEnd = (e) => {
-      for (let touch of e.changedTouches) {
-        activeTouches.current.delete(touch.identifier); // Remove lifted fingers
-      }
-    };
-
-    document.addEventListener("touchstart", onTouchStart, { passive: false });
-    document.addEventListener("touchend", onTouchEnd, { passive: false });
-
-    return () => {
-      document.removeEventListener("touchstart", onTouchStart);
-      document.removeEventListener("touchend", onTouchEnd);
-    };
-  }, []);
   useFrame(({ camera, mouse }) => {
     if (rb.current) {
       const vel = rb.current.linvel();
@@ -236,33 +243,18 @@ const PlayerController = () => {
         <group ref={character}>
           <Player position-y={-0.58} animation={animation} />;
           {isMobile && (
-            <Html position={[0.01, 1, 0]} transform={false}>
+            <Html position={[0, 1.5, 0]} transform={false}>
               <button
-                onTouchStart={(event) => {
-                  event.preventDefault(); // Prevents any unwanted gesture issues
-
+                onTouchStart={(e) => {
+                  e.preventDefault(); // Prevents touch event from canceling movement
                   if (!inTheAir.current && rb.current) {
-                    const currentVel = rb.current.linvel(); // Get current velocity
+                    const currentVel = rb.current.linvel();
                     rb.current.setLinvel(
-                      {
-                        x: currentVel.x, // Preserve movement direction
-                        y: JUMP_FORCE, // Apply jump force
-                        z: currentVel.z, // Preserve movement speed
-                      },
+                      { x: currentVel.x, y: JUMP_FORCE, z: currentVel.z },
                       true
                     );
                     inTheAir.current = true;
                   }
-                }}
-                style={{
-                  padding: "10px 20px",
-                  fontSize: "16px",
-                  background: "rgba(255, 255, 255, 0.9)",
-                  borderRadius: "8px",
-                  border: "1px solid #000",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                  touchAction: "none", // Prevents browser interference
                 }}
               >
                 Jump
