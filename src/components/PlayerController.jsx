@@ -62,19 +62,30 @@ const PlayerController = () => {
     const onMouseDown = (e) => {
       isClicking.current = true;
     };
+
     const onMouseUp = (e) => {
       isClicking.current = false;
     };
+
+    const onTouchStart = (e) => {
+      isClicking.current = true;
+      e.preventDefault(); // Prevents long-press selection
+    };
+
+    const onTouchEnd = (e) => {
+      isClicking.current = false;
+    };
+
     document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("mouseup", onMouseUp);
-    // touch
-    document.addEventListener("touchstart", onMouseDown);
-    document.addEventListener("touchend", onMouseUp);
+    document.addEventListener("touchstart", onTouchStart, { passive: false });
+    document.addEventListener("touchend", onTouchEnd);
+
     return () => {
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("mouseup", onMouseUp);
-      document.removeEventListener("touchstart", onMouseDown);
-      document.removeEventListener("touchend", onMouseUp);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
 
@@ -96,11 +107,21 @@ const PlayerController = () => {
       let speed = get().run ? RUN_SPEED : WALK_SPEED;
 
       if (isClicking.current) {
-        console.log("clicking", mouse.x, mouse.y);
-        if (Math.abs(mouse.x) > 0.1) {
+        if (mouse.x && mouse.y) {
+          // For mouse users
           movement.x = -mouse.x;
+          movement.z = mouse.y + 0.4;
+        } else if ("ontouchstart" in window) {
+          // For touch users
+          const touch = event.touches[0]; // Get the first touch
+          if (touch) {
+            const screenCenterX = window.innerWidth / 2;
+            const screenCenterY = window.innerHeight / 2;
+            movement.x = (touch.clientX - screenCenterX) / screenCenterX;
+            movement.z = (touch.clientY - screenCenterY) / screenCenterY;
+          }
         }
-        movement.z = mouse.y + 0.4;
+
         if (Math.abs(movement.x) > 0.5 || Math.abs(movement.z) > 0.5) {
           speed = RUN_SPEED;
         }
