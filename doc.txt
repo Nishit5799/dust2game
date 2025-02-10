@@ -1,0 +1,16 @@
+onTouchStart={() => {
+    if (!inTheAir.current && rb.current) {
+        const forward = new Vector3();
+        character.current.getWorldDirection(forward);
+        
+        rb.current.setLinvel(
+            {
+                x: forward.x * WALK_SPEED, // Jump in facing direction
+                y: JUMP_FORCE, // Apply jump force
+                z: forward.z * WALK_SPEED,
+            },
+            true
+        );
+        inTheAir.current = true;
+    }
+}}
