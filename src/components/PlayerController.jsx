@@ -89,30 +89,39 @@ const PlayerController = () => {
       document.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
+
   useEffect(() => {
     let lastTap = 0;
-    let lastTouchId = null;
+    let lastMovement = { x: 0, z: 0 }; // Store last movement direction
 
     const onTouchStart = (e) => {
       const currentTime = new Date().getTime();
-      const touch = e.changedTouches[0]; // Get the first touch event
-      const touchId = touch.identifier; // Unique ID for this touch
+      const tapLength = currentTime - lastTap;
 
-      // Check if this is the same finger tapping twice
-      if (touchId === lastTouchId && currentTime - lastTap < 300) {
-        // Double tap detected, trigger jump without affecting movement
+      if (tapLength < 500 && tapLength > 0) {
+        // Double tap detected, apply jump
         if (!inTheAir.current && rb.current) {
           const vel = rb.current.linvel();
           vel.y += JUMP_FORCE;
+
+          // Apply jump while maintaining movement direction
+          vel.x = lastMovement.x;
+          vel.z = lastMovement.z;
+
           rb.current.setLinvel(vel, true);
           inTheAir.current = true;
+        }
+      } else {
+        // Store current movement direction on first tap
+        if (rb.current) {
+          const vel = rb.current.linvel();
+          lastMovement.x = vel.x;
+          lastMovement.z = vel.z;
         }
       }
 
       lastTap = currentTime;
-      lastTouchId = touchId; // Store the ID of the touch that last tapped
-
-      e.preventDefault(); // Prevents default touch behavior
+      e.preventDefault();
     };
 
     document.addEventListener("touchstart", onTouchStart, { passive: false });
