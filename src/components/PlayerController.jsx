@@ -57,6 +57,8 @@ const PlayerController = () => {
   const [, get] = useKeyboardControls();
   const isClicking = useRef(false);
   const lastTap = useRef(0);
+  const movement = useRef({ x: 0, z: 0 });
+  const isMoving = useRef(false);
 
   const JUMP_FORCE = 3;
 
@@ -104,18 +106,22 @@ const PlayerController = () => {
 
   useEffect(() => {
     const onTouchMove = (e) => {
-      if (e.touches.length === 1) {
+      if (e.touches.length > 0) {
         const touch = e.touches[0];
         movement.current.x = (touch.clientX / window.innerWidth - 0.5) * 2;
         movement.current.z = (touch.clientY / window.innerHeight - 0.5) * -2;
+        isMoving.current = true;
       }
     };
 
     const onTouchEnd = (e) => {
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTap.current;
-      if (e.touches.length === 1) return;
-      if (tapLength < 300 && !inTheAir.current) {
+      if (
+        tapLength < 300 &&
+        !inTheAir.current &&
+        e.changedTouches.length === 1
+      ) {
         if (rb.current) {
           const vel = rb.current.linvel();
           vel.y += JUMP_FORCE;
@@ -124,6 +130,9 @@ const PlayerController = () => {
         }
       }
       lastTap.current = currentTime;
+      if (e.touches.length === 0) {
+        isMoving.current = false;
+      }
     };
 
     document.addEventListener("touchmove", onTouchMove);
@@ -133,6 +142,7 @@ const PlayerController = () => {
       document.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
+
   useFrame(({ camera, mouse }) => {
     if (rb.current) {
       const vel = rb.current.linvel();
