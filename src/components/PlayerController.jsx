@@ -104,6 +104,7 @@ const PlayerController = () => {
 
   useEffect(() => {
     const onTouchEnd = (e) => {
+      if (e.touches.length === 1) return;
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTap.current;
       if (tapLength < 300 && !inTheAir.current) {
