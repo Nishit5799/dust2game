@@ -56,6 +56,7 @@ const PlayerController = () => {
   const cameraLookAt = useRef(new Vector3());
   const [, get] = useKeyboardControls();
   const isClicking = useRef(false);
+  const lastTap = useRef(0);
 
   const JUMP_FORCE = 3;
 
@@ -97,6 +98,27 @@ const PlayerController = () => {
       document.removeEventListener("mousedown", onMouseDown);
       document.removeEventListener("mouseup", onMouseUp);
       document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onTouchEnd = (e) => {
+      const currentTime = new Date().getTime();
+      const tapLength = currentTime - lastTap.current;
+      if (tapLength < 300 && !inTheAir.current) {
+        if (rb.current) {
+          const vel = rb.current.linvel();
+          vel.y += JUMP_FORCE;
+          rb.current.setLinvel(vel, true);
+          inTheAir.current = true;
+        }
+      }
+      lastTap.current = currentTime;
+    };
+
+    document.addEventListener("touchend", onTouchEnd);
+    return () => {
       document.removeEventListener("touchend", onTouchEnd);
     };
   }, []);
@@ -214,45 +236,6 @@ const PlayerController = () => {
           </group>
         </group>
         <CapsuleCollider args={[0.3, 0.6]} position-y={-0.52} />
-        {isSmallScreen && (
-          <Html position={[0, 0.4, 0]} center>
-            <div
-              style={{
-                width: "60px",
-                height: "60px",
-                padding: "60px 60px",
-                backgroundColor: "rgb(255,255,255,0.4)",
-                borderRadius: "50%",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "16px",
-                fontWeight: "bold",
-                cursor: "pointer",
-                userSelect: "none",
-                boxShadow: "0px 4px 6px rgba(0,0,0,0.2)",
-                touchAction: "none",
-              }}
-              onPointerDown={() => {
-                if (!inTheAir.current && rb.current) {
-                  const vel = rb.current.linvel();
-                  const direction = new Vector3(
-                    Math.sin(rotationTarget.current),
-                    0,
-                    Math.cos(rotationTarget.current)
-                  );
-                  vel.x += direction.x * 2; // Apply forward force
-                  vel.y = JUMP_FORCE; // Apply upward force
-                  vel.z += direction.z * 2;
-                  rb.current.setLinvel(vel, true);
-                  inTheAir.current = true;
-                }
-              }}
-            >
-              Jump
-            </div>
-          </Html>
-        )}
       </RigidBody>
     </>
   );
