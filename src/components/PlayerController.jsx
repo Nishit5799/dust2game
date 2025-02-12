@@ -257,7 +257,7 @@ const PlayerController = () => {
             <Player position-y={-0.58} animation={animation} />;
           </group>
         </group>
-        <CapsuleCollider args={[0.15, 0.6]} position-y={-0.52} />
+        <CapsuleCollider args={[0.2, 0.6]} position-y={-0.52} />
       </RigidBody>
     </>
   );
