@@ -73,7 +73,7 @@ const PlayerController = () => {
   const movement = useRef({ x: 0, z: 0 });
   const isMoving = useRef(false);
 
-  const JUMP_FORCE = isSmallScreen ? 4 : 3.3;
+  const JUMP_FORCE = isSmallScreen ? 3.8 : 3.3;
 
   useEffect(() => {
     const onMouseDown = (e) => {
