@@ -29,19 +29,32 @@ const lerpAngle = (start, end, t) => {
 };
 
 const PlayerController = () => {
-  const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
-    "Character Control",
-    {
-      WALK_SPEED: { value: 0.8, min: 0.1, max: 4, step: 0.1 },
-      RUN_SPEED: { value: 1.6, min: 0.2, max: 12, step: 0.1 },
-      ROTATION_SPEED: {
-        value: degToRad(0.5),
-        min: degToRad(0.1),
-        max: degToRad(5),
-        step: degToRad(0.1),
-      },
-    }
-  );
+  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 640);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsSmallScreen(window.innerWidth < 640);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
+  //   "Character Control",
+  //   {
+  //     WALK_SPEED: { value: 0.8, min: 0.1, max: 4, step: 0.1 },
+  //     RUN_SPEED: { value: 1.6, min: 0.2, max: 12, step: 0.1 },
+  //     ROTATION_SPEED: {
+  //       value: degToRad(0.5),
+  //       min: degToRad(0.1),
+  //       max: degToRad(5),
+  //       step: degToRad(0.1),
+  //     },
+  //   }
+  // );
+  const WALK_SPEED = isSmallScreen ? 1.4 : 1.2;
+  const RUN_SPEED = isSmallScreen ? 2.5 : 2.5;
+  const ROTATION_SPEED = isSmallScreen ? 0.045 : 0.04;
   const inTheAir = useRef(false);
   const rb = useRef();
   const container = useRef();
@@ -60,18 +73,7 @@ const PlayerController = () => {
   const movement = useRef({ x: 0, z: 0 });
   const isMoving = useRef(false);
 
-  const JUMP_FORCE = 3;
-
-  const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 640);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsSmallScreen(window.innerWidth < 640);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const JUMP_FORCE = 3.3;
 
   useEffect(() => {
     const onMouseDown = (e) => {

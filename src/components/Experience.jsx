@@ -4,7 +4,6 @@ import { Canvas } from "@react-three/fiber";
 import {
   Environment,
   KeyboardControls,
-  OrbitControls,
   OrthographicCamera,
 } from "@react-three/drei";
 
@@ -45,8 +44,6 @@ const Experience = () => {
   return (
     <KeyboardControls map={keyboardMap}>
       <Canvas camera={{ position: [0, 4, 4], fov: 60 }} shadows>
-        {/* <OrbitControls /> */}
-
         <Environment preset="sunset" />
         <directionalLight
           intensity={0.65}
