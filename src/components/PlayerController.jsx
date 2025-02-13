@@ -2,8 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import { CapsuleCollider, RigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
-import { useFrame, useThree } from "@react-three/fiber";
-
+import { useFrame } from "@react-three/fiber";
 import { useKeyboardControls } from "@react-three/drei";
 import { MathUtils } from "three/src/math/MathUtils";
 
@@ -30,8 +29,6 @@ const lerpAngle = (start, end, t) => {
 
 const PlayerController = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 640);
-  const { scene } = useThree();
-  const spotLightRef = useRef();
   useEffect(() => {
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 640);
@@ -40,29 +37,7 @@ const PlayerController = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
-  useEffect(() => {
-    if (scene) {
-      scene.traverse((child) => {
-        if (child.type === "SpotLight") {
-          spotLightRef.current = child;
-        }
-      });
-    }
-  }, [scene]);
 
-  // const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
-  //   "Character Control",
-  //   {
-  //     WALK_SPEED: { value: 0.8, min: 0.1, max: 4, step: 0.1 },
-  //     RUN_SPEED: { value: 1.6, min: 0.2, max: 12, step: 0.1 },
-  //     ROTATION_SPEED: {
-  //       value: degToRad(0.5),
-  //       min: degToRad(0.1),
-  //       max: degToRad(5),
-  //       step: degToRad(0.1),
-  //     },
-  //   }
-  // );
   const WALK_SPEED = isSmallScreen ? 2.5 : 2.5;
   const RUN_SPEED = isSmallScreen ? 3.7 : 4;
   const ROTATION_SPEED = isSmallScreen ? 0.045 : 0.04;
@@ -83,6 +58,7 @@ const PlayerController = () => {
   const lastTap = useRef(0);
   const movement = useRef({ x: 0, z: 0 });
   const isMoving = useRef(false);
+  const touchPoints = useRef({});
 
   const JUMP_FORCE = isSmallScreen ? 3.8 : 3.3;
 
@@ -119,15 +95,26 @@ const PlayerController = () => {
 
   useEffect(() => {
     const onTouchMove = (e) => {
-      if (e.touches.length > 0) {
-        const touch = e.touches[0];
-        movement.current.x = (touch.clientX / window.innerWidth - 0.5) * 2;
-        movement.current.z = (touch.clientY / window.innerHeight - 0.5) * -2;
+      Array.from(e.touches).forEach((touch) => {
+        touchPoints.current[touch.identifier] = touch;
+      });
+
+      const primaryTouch =
+        touchPoints.current[Object.keys(touchPoints.current)[0]];
+      if (primaryTouch) {
+        movement.current.x =
+          (primaryTouch.clientX / window.innerWidth - 0.5) * 2;
+        movement.current.z =
+          (primaryTouch.clientY / window.innerHeight - 0.5) * -2;
         isMoving.current = true;
       }
     };
 
     const onTouchEnd = (e) => {
+      Array.from(e.changedTouches).forEach((touch) => {
+        delete touchPoints.current[touch.identifier];
+      });
+
       const currentTime = new Date().getTime();
       const tapLength = currentTime - lastTap.current;
       if (
@@ -143,7 +130,8 @@ const PlayerController = () => {
         }
       }
       lastTap.current = currentTime;
-      if (e.touches.length === 0) {
+
+      if (Object.keys(touchPoints.current).length === 0) {
         isMoving.current = false;
       }
     };
@@ -180,12 +168,13 @@ const PlayerController = () => {
           movement.z = mouse.y + 0.4;
         } else if ("ontouchstart" in window) {
           // For touch users
-          const touch = event.touches[0]; // Get the first touch
-          if (touch) {
+          const primaryTouch =
+            touchPoints.current[Object.keys(touchPoints.current)[0]];
+          if (primaryTouch) {
             const screenCenterX = window.innerWidth / 2;
             const screenCenterY = window.innerHeight / 2;
-            movement.x = (touch.clientX - screenCenterX) / screenCenterX;
-            movement.z = (touch.clientY - screenCenterY) / screenCenterY;
+            movement.x = (primaryTouch.clientX - screenCenterX) / screenCenterX;
+            movement.z = (primaryTouch.clientY - screenCenterY) / screenCenterY;
           }
         }
 
@@ -249,6 +238,7 @@ const PlayerController = () => {
       camera.lookAt(cameraLookAt.current);
     }
   });
+
   return (
     <>
       <RigidBody
@@ -264,7 +254,7 @@ const PlayerController = () => {
         <group ref={container}>
           <group ref={cameraTarget} position-z={1.5} />
           <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
-          <group ref={character} castShadow receiveShadow>
+          <group ref={character}>
             <Player position-y={-0.58} animation={animation} />;
           </group>
         </group>
