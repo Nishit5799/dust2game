@@ -62,7 +62,7 @@ const Experience = () => {
             attach={"shadow-camera"}
           />
         </directionalLight>
-        <Physics debug>
+        <Physics>
           <PlayerController />
 
           <Dust2Map />

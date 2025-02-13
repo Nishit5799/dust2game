@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import Player from "./Player";
 import { CapsuleCollider, RigidBody } from "@react-three/rapier";
 import { Vector3 } from "three";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 
 import { useKeyboardControls } from "@react-three/drei";
 import { MathUtils } from "three/src/math/MathUtils";
@@ -30,6 +30,8 @@ const lerpAngle = (start, end, t) => {
 
 const PlayerController = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(window.innerWidth < 640);
+  const { scene } = useThree();
+  const spotLightRef = useRef();
   useEffect(() => {
     const handleResize = () => {
       setIsSmallScreen(window.innerWidth < 640);
@@ -38,6 +40,15 @@ const PlayerController = () => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  useEffect(() => {
+    if (scene) {
+      scene.traverse((child) => {
+        if (child.type === "SpotLight") {
+          spotLightRef.current = child;
+        }
+      });
+    }
+  }, [scene]);
 
   // const { WALK_SPEED, RUN_SPEED, ROTATION_SPEED } = useControls(
   //   "Character Control",
@@ -52,8 +63,8 @@ const PlayerController = () => {
   //     },
   //   }
   // );
-  const WALK_SPEED = isSmallScreen ? 1.4 : 1.2;
-  const RUN_SPEED = isSmallScreen ? 2.5 : 2.5;
+  const WALK_SPEED = isSmallScreen ? 2.5 : 2.5;
+  const RUN_SPEED = isSmallScreen ? 3.7 : 4;
   const ROTATION_SPEED = isSmallScreen ? 0.045 : 0.04;
   const inTheAir = useRef(false);
   const rb = useRef();
@@ -253,11 +264,11 @@ const PlayerController = () => {
         <group ref={container}>
           <group ref={cameraTarget} position-z={1.5} />
           <group ref={cameraPosition} position-y={1.5} position-z={-1.5} />
-          <group ref={character}>
+          <group ref={character} castShadow receiveShadow>
             <Player position-y={-0.58} animation={animation} />;
           </group>
         </group>
-        <CapsuleCollider args={[0.2, 0.6]} position-y={-0.52} />
+        <CapsuleCollider args={[0.3, 0.54]} position-y={-0.15} />
       </RigidBody>
     </>
   );
