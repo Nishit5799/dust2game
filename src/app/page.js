@@ -17,8 +17,8 @@ export default function Home() {
 
         {/* Mobile Controls (Hidden on Medium+ Screens) */}
         <div className="fixed top-0 left-0 bg-white text-black p-2 z-50 rounded-sm pointer-events-none block md:hidden">
-          MOVE: TOUCH <br />
-          JUMP: DOUBLETAP
+          USE ONE FINGER <br /> MOVE: TOUCH <br />
+          JUMP: TAP
         </div>
       </div>
     </Suspense>
